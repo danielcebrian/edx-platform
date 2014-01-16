@@ -215,7 +215,7 @@
                 }
 
                 $.each(attrs, function (name, value) {
-                    return result = result && element.attr(name) === value;
+                    result = result && element.attr(name) === value;
                 });
 
                 return result;
