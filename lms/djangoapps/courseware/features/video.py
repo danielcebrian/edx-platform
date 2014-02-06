@@ -15,6 +15,16 @@ HTML5_SOURCES_INCORRECT = [
     'https://s3.amazonaws.com/edx-course-videos/edx-intro/edX-FA12-cware-1_100.mp99'
 ]
 
+VIDEO_BUTTONS = {
+    'CC': '.hide-subtitles',
+    'volume': '.volume',
+    'play': '.video_control.play',
+    'pause': '.video_control.pause',
+}
+
+# We should wait 300 ms for event handler invocation + 200ms for safety.
+DELAY = 0.5
+
 coursenum = 'test_course'
 sequence = {}
 
@@ -151,3 +161,30 @@ def _change_video_speed(speed):
     world.browser.execute_script("$('.speeds').addClass('open')")
     speed_css = 'li[data-speed="{0}"] a'.format(speed)
     world.css_click(speed_css)
+
+
+@step('I click video button "([^"]*)"$')
+def click_button_video(_step, button_type):
+    world.wait(DELAY)
+    world.wait_for_ajax_complete()
+    button = button_type.strip()
+    world.css_click(VIDEO_BUTTONS[button])
+
+
+@step('I see video starts playing from "([^"]*)" seconds$')
+def start_playing_video_from_n_seconds(_step, seconds):
+    # TODO: Use `seconds` argument.
+    # TODO: Check only against the first part of vidtime string (from the
+    #       beginning to the character "/"). It is better than determining the
+    #       length of the video. Right now "0:10 / 1:55", and "0:11 / 1:55" are
+    #       hard coded, so the test will break if the default video will be
+    #       changed.
+    world.wait_for(lambda _: world.css_html('.vidtime')[:4] == '0:10' or world.css_html('.vidtime')[:4] == '0:11')
+
+
+@step('I seek video to "([^"]*)" seconds$')
+def seek_video_to_n_seconds(_step, seconds):
+    time = float(seconds.strip())
+    jsCode = "$('.video').data('video-player-state').videoPlayer.onSlideSeek({time: %f})" % time
+    world.browser.execute_script(jsCode)
+
