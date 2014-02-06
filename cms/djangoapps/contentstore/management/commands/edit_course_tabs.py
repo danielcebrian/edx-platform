@@ -5,8 +5,6 @@
 #
 # Run it this way:
 #   ./manage.py cms --settings dev edit_course_tabs --course Stanford/CS99/2013_spring
-# Or via paver:
-#   paver django_admin --system=cms --settings=dev --action=edit_course_tabs --options="--course Stanford/CS99/2013_spring"
 #
 from optparse import make_option
 from django.core.management.base import BaseCommand, CommandError

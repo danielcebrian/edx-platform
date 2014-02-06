@@ -1,274 +1,104 @@
-from paver.easy import *
-from pavelib import prereqs, proc_utils
-from proc_utils import write_stderr
-
-import json
+"""
+Asset compilation and collection.
+"""
+import argparse
 import glob
-import os
-import platform
-
-# Build Constants
-REPO_ROOT = path(__file__).abspath().dirname().dirname()  # /project_dir/edx-platform/
-PROJECT_ROOT = REPO_ROOT.dirname()      # /project_dir
-REPORT_DIR = REPO_ROOT / "reports"   # /project_dir/edx-platform/reports
-TEST_DIR = REPO_ROOT / ".testids"    # /project_dir/edx-platform/.testdir
-COMMON_ROOT = PROJECT_ROOT / "common"   # /project_dir/common
-COURSES_ROOT = PROJECT_ROOT / "data"    # /project_dir/data
+from paver.easy import *
+from .utils.envs import Env
+from .utils.cmd import cmd, django_cmd
 
 
-# Environment constants
-if 'SERVICE_VARIANT' in os.environ:
-    CONFIG_PREFIX = os.environ['SERVICE_VARIANT'] + '.'
-else:
-    CONFIG_PREFIX = ''
-
-ENV_FILE = os.path.join(PROJECT_ROOT, CONFIG_PREFIX + "env.json")
-
-env_data = None
-
-try:
-    with open(ENV_FILE) as env_file:
-        env_data = json.load(env_file)
-except IOError:
-    write_stderr("Warning: File env.json not found - some configuration requires this\n")
-
-USE_CUSTOM_THEME = False
-
-if env_data:
-    if 'FEATURES' in env_data and 'USE_CUSTOM_THEME' in env_data['FEATURES']:
-        USE_CUSTOM_THEME = env_data['FEATURES']['USE_CUSTOM_THEME']
-
-    if USE_CUSTOM_THEME:
-        THEME_NAME = env_data['THEME_NAME']
-        THEME_ROOT = PROJECT_ROOT / "themes" / THEME_NAME
-        THEME_SASS = THEME_ROOT / "static" / "sass"
-
-MINIMAL_DARWIN_NOFILE_LIMIT = 8000
+COFFEE_DIRS = ['lms', 'cms', 'common']
+SASS_LOAD_PATHS = ['./common/static/sass']
+SASS_UPDATE_DIRS = ['*/static']
+SASS_CACHE_PATH = '/tmp/sass-cache'
 
 
-def xmodule_cmd(watch=False, debug=False):
-    xmodule = 'xmodule_assets common/static/xmodule'
+def theme_sass_paths():
+    """
+    Return the a list of paths to the theme's sass assets,
+    or an empty list if no theme is configured.
+    """
+    edxapp_env = Env()
 
-    if watch:
-        xmodule = ("watchmedo shell-command "
-                   " --patterns='*.js;*.coffee;*.sass;*.scss;*.css' "
-                   " --recursive --command=\'xmodule_assets common/static/xmodule\'"
-                   " --wait common/lib/xmodule"
-                   )
+    if edxapp_env.feature_flags.get('USE_CUSTOM_THEME', False):
+        theme_name = edxapp_env.env_tokens.get('THEME_NAME', '')
+        theme_root = path(edxapp_env.REPO_ROOT).dirname() / "themes" / theme_name
+        return [theme_root / "static" / "sass"]
 
-    return xmodule
-
-
-def coffee_clean():
-    files = glob.glob('*/static/coffee/**/*.js')
-
-    for f in files:
-        os.remove(f)
-
-
-def coffee_cmd(watch=False):
-
-    if watch:
-        cmd = "node_modules/.bin/coffee --compile --watch lms/ cms/ common/"
     else:
-        cmd = "node_modules/.bin/coffee --compile `find lms/ cms/ common/ -type f -name *.coffee` "
-
-    if platform.system() == "Darwin":
-        precmd = "ulimit -n 8000;"
-    else:
-        precmd = ""
-
-    return "{precmd} {cmd}".format(precmd=precmd, cmd=cmd)
+        return []
 
 
-def sass_cmd(watch=False, debug=False):
-    load_paths = ["./common/static/sass"]
-    watch_paths = ["*/static"]
+def compile_coffeescript():
+    """
+    Compile CoffeeScript to JavaScript.
+    """
+    dirs = " ".join([Env.REPO_ROOT / coffee_dir for coffee_dir in COFFEE_DIRS])
+    sh(cmd(
+        "node_modules/.bin/coffee", "--compile",
+        " `find {dirs} -type f -name \"*.coffee\"`".format(dirs=dirs)
+    ))
 
-    if USE_CUSTOM_THEME:
-        load_paths.append(THEME_SASS)
-        watch_paths.append(THEME_SASS)
 
-    load_paths = ' '.join(load_paths)
-    watch_paths = ' '.join(watch_paths)
+def compile_sass(debug):
+    """
+    Compile Sass to CSS.
+    """
+    theme_paths = theme_sass_paths()
+    sh(cmd(
+        'sass', '' if debug else '--style compressed',
+        "--cache-location {cache}".format(cache=SASS_CACHE_PATH),
+        "--load-path", " ".join(SASS_LOAD_PATHS + theme_paths),
+        "--update", "-E", "utf-8", " ".join(SASS_UPDATE_DIRS + theme_paths)
+    ))
 
-    debug_info = '--debug-info' if debug else '--style=compressed '
-    watch_or_update = '--watch' if watch else '--update'
 
-    cmd = ('sass {debug_info} --load-path={load_paths} {watch_or_update} -E utf-8 {watch_paths}'.format(
-           debug_info=debug_info, load_paths=load_paths, watch_or_update=watch_or_update, watch_paths=watch_paths)
-           )
+def compile_templated_sass(systems, settings):
+    """
+    Render Mako templates for Sass files.
+    `systems` is a list of systems (e.g. 'lms' or 'studio' or both)
+    `settings` is the Django settings module to use.
+    """
+    for sys in systems:
+        sh(django_cmd(sys, settings, 'preprocess_assets'))
 
-    return cmd
+
+def process_xmodule_assets():
+    """
+    Process XModule static assets.
+    """
+    sh('xmodule_assets common/static/xmodule')
+
+
+def collect_assets(systems, settings):
+    """
+    Collect static assets, including Django pipeline processing.
+    `systems` is a list of systems (e.g. 'lms' or 'studio' or both)
+    `settings` is the Django settings module to use.
+    """
+    for sys in systems:
+        sh(django_cmd(sys, settings, "collectstatic --noinput > /dev/null"))
 
 
 @task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-    ("env=", "e", "Environment settings"),
-    ("watch", "w", "Run with watch"),
-    ("debug", "d", "Run with debug"),
-    ("clobber", "c", "Remove compiled Coffeescript files"),
-])
-def compile_coffeescript(options):
+@needs('pavelib.prereqs.install_prereqs')
+@consume_args
+def update_assets(args):
     """
-    Runs coffeescript
+    Compile CoffeeScript and Sass, then collect static assets.
     """
+    parser = argparse.ArgumentParser(prog='paver update_assets')
+    parser.add_argument('system', type=str, nargs='+', help="lms or studio")
+    parser.add_argument('--settings', type=str, default="dev", help="Django settings module")
+    parser.add_argument('--debug', action='store_true', default=False, help="Disable Sass compression")
+    parser.add_argument('--skip-collect', action='store_true', default=False, help="Skip collection of static assets")
+    args = parser.parse_args(args)
 
-    system = getattr(options, 'system', 'lms')
-    env = getattr(options, 'env', 'dev')
-    run_watch = getattr(options, 'watch', False)
-    clobber = getattr(options, 'clobber', False)
+    compile_templated_sass(args.system, args.settings)
+    compile_coffeescript()
+    compile_sass(args.debug)
+    process_xmodule_assets()
 
-    print ("Compile Coffeescript")
-
-    coffee_clean()
-
-    if clobber:
-        print("Coffeescript files removed")
-        return
-
-    try:
-        sh('python manage.py %s preprocess_assets --settings=%s --traceback ' % (system, env))
-    except:
-        write_stderr("asset preprocessing failed")
-        return
-
-    sh(coffee_cmd(False))
-
-    if run_watch:
-        proc_utils.run_process([coffee_cmd(run_watch)], True)
-
-
-@task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-    ("env=", "e", "Environment settings"),
-    ("watch", "w", "Run with watch"),
-    ("debug", "d", "Run with debug"),
-])
-def compile_xmodule(options):
-    """
-    Runs xmodule_cmd
-    """
-
-    system = getattr(options, 'system', 'lms')
-    env = getattr(options, 'env', 'dev')
-    run_watch = getattr(options, 'watch', False)
-    run_debug = getattr(options, 'debug', False)
-
-    print ("Compile xmodule assets")
-
-    try:
-        sh('python manage.py %s preprocess_assets --settings=%s --traceback ' % (system, env))
-    except:
-        write_stderr("asset preprocessing failed")
-        return
-
-    sh(xmodule_cmd(False, run_debug))
-
-    if run_watch:
-        proc_utils.run_process([xmodule_cmd(run_watch, run_debug)], True)
-
-
-@task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-    ("env=", "e", "Environment settings"),
-    ("watch", "w", "Run with watch"),
-    ("debug", "d", "Run with debug"),
-])
-def compile_sass(options):
-    """
-    Runs sass
-    """
-
-    system = getattr(options, 'system', 'lms')
-    env = getattr(options, 'env', 'dev')
-    run_watch = getattr(options, 'watch', False)
-    run_debug = getattr(options, 'debug', False)
-
-    print ("Compile sass")
-
-    try:
-        sh('python manage.py %s preprocess_assets --settings=%s --traceback ' % (system, env))
-    except:
-        write_stderr("asset preprocessing failed")
-        return
-
-    sh(sass_cmd(False, run_debug))
-
-    if run_watch:
-        proc_utils.run_process([sass_cmd(run_watch, run_debug)], True)
-
-
-@task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-    ("env=", "e", "Environment settings"),
-])
-def collectstatic(options):
-    """
-    Runs collectstatic
-    """
-
-    system = getattr(options, 'system', 'lms')
-    env = getattr(options, 'env', 'dev')
-
-    print ("Run collectstatic")
-
-    try:
-        sh('python manage.py %s preprocess_assets --settings=%s --traceback ' % (system, env))
-    except:
-        write_stderr("asset preprocessing failed")
-        return
-
-    try:
-        sh('python manage.py %s collectstatic --traceback --settings=%s' % (system, env) + ' --noinput > /dev/null')
-    except:
-        pass
-
-
-@task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-    ("env=", "e", "Environment settings"),
-    ("watch", "w", "Run with watch"),
-    ("debug", "d", "Run with debug"),
-    ("collectstatic", "c", "Collect Static"),
-])
-def compile_assets(options):
-    """
-    Runs coffeescript, sass and xmodule_cmd and then optionally collectstatic
-    """
-
-    system = getattr(options, 'system', 'lms')
-    env = getattr(options, 'env', 'dev')
-    run_watch = getattr(options, 'watch', False)
-    run_debug = getattr(options, 'debug', False)
-    collectstatic = getattr(options, 'collectstatic', False)
-
-    print ("Compile all assets")
-
-    try:
-        sh('python manage.py %s preprocess_assets --settings=%s --traceback ' % (system, env))
-    except:
-        write_stderr("asset preprocessing failed")
-        return
-
-    prereqs.install_prereqs()
-
-    coffee_clean()
-
-    if collectstatic:
-        print("collecting static")
-        sh('python manage.py {system} collectstatic --traceback --settings={env} --noinput > /dev/null'.format(system=system, env=env))
-
-    if run_watch:
-        proc_utils.run_process([coffee_cmd(run_watch),
-                                xmodule_cmd(run_watch, run_debug),
-                                sass_cmd(run_watch, run_debug)], True)
-    else:
-        sh(coffee_cmd(False))
-        sh(xmodule_cmd(False, run_debug))
-        sh(sass_cmd(False, run_debug))
+    if not args.skip_collect:
+        collect_assets(args.system, args.settings)

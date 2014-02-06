@@ -6,8 +6,7 @@ def deprecated(deprecated, deprecated_by)
 
     task deprecated do
 
-        puts("Task #{deprecated} has been deprecated. Use #{deprecated_by} instead. Waiting 5 seconds...".red)
-        sleep(5)
+        puts("Task #{deprecated} has been deprecated. Use #{deprecated_by} instead.".red)
         sh(deprecated_by)
         exit
     end

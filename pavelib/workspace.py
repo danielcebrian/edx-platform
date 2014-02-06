@@ -1,8 +1,10 @@
-# Run --- Internationalization tasks
+"""
+Workspace migration tasks.
+"""
 
-from paver.easy import *
-from pavelib import assets
 import os
+from paver.easy import *
+from .utils.envs import Env
 
 
 @task
@@ -10,25 +12,21 @@ def workspace_migrate():
     """
     Run scripts in ws_migrations directory
     """
-
-    MIGRATION_MARKER_DIR = os.path.join(assets.REPO_ROOT, '.ws_migrations_complete')
-    MIGRATION_DIR = os.path.join(assets.REPO_ROOT, 'ws_migrations')
-    SKIP_MIGRATIONS = os.getenv('SKIP_WS_MIGRATIONS', False)
-
-    if SKIP_MIGRATIONS:
+    if os.getenv('SKIP_WS_MIGRATIONS', False):
         return
 
-    files = os.listdir(MIGRATION_DIR)
+    MIGRATION_MARKER_DIR = Env.REPO_ROOT / '.ws_migrations_complete'
+    MIGRATION_DIR = Env.REPO_ROOT / 'ws_migrations'
 
+    files = os.listdir(MIGRATION_DIR)
     migration_files = []
 
-    for file in files:
-        if not file == 'README.rst' and os.access(file, os.X_OK):
-            migration_files.append(file)
+    for file_handle in files:
+        if not file_handle == 'README.rst' and os.access(file_handle, os.X_OK):
+            migration_files.append(file_handle)
 
     for migration in migration_files:
-        completion_file = os.path.join(MIGRATION_MARKER_DIR, os.path.basename(migration))
-        if not os.path.isfile(completion_file):
-            cmd = os.path.join(MIGRATION_DIR, migration)
-            sh(cmd)
+        completion_file = MIGRATION_MARKER_DIR / migration.basename()
+        if not completion_file.isfile():
+            sh(MIGRATION_DIR / migration)
             open(completion_file, 'w')

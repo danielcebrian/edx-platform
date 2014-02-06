@@ -1,76 +1,38 @@
+"""
+Start servers in the Vagrant devstack VM.
+"""
+
+import argparse
 from paver.easy import *
-from pavelib import prereqs, proc_utils, paver_utils, assets
+from .utils.process import run_process
+from .utils.color import print_red
+from .utils.cmd import django_cmd
 
 
-# devstack aimed at vagrant environment studio = cms
-default_port = {"lms": 8000, "studio": 8001}
-
-
-# Abort if system is not one we recognize
-def assert_devstack_sys(sys_name):
-    if not sys_name in ('lms', 'studio'):
-        paver_utils.print_red("Devstack system must be either 'lms' or 'studio'")
-        exit(1)
-
-
-# Convert "studio" to "cms"
-def old_system(sys_name):
-    return "cms" if sys_name == "studio" else sys_name
+DEFAULT_PORT = {"lms": 8000, "studio": 8001}
 
 
 @task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-])
-def devstack_start(options):
-    """
-    Start the server
-    """
-    system = getattr(options, 'system', 'lms')
-    assert_devstack_sys(system)
-    port = default_port[system]
-    system = old_system(system)
-
-    proc_utils.run_process(
-        ['python manage.py {system} runserver --settings=devstack 0.0.0.0:{port}'.format(
-            system=system, port=port)
-         ], True)
-
-
-@task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-])
-def devstack_assets(options):
-    """
-    Update static assets
-    """
-    system = getattr(options, 'system', 'lms')
-    assert_devstack_sys(system)
-    system = old_system(system)
-
-    setattr(options, 'system', system)
-    setattr(options, 'env', 'devstack')
-    assets.compile_assets(options)
-
-
-@task
-def devstack_install():
-    """
-    Update Python, Ruby, and Node requirements
-    """
-
-    prereqs.install_prereqs()
-
-
-@task
-@cmdopts([
-    ("system=", "s", "System to act on"),
-])
-def devstack(options):
+@needs('pavelib.prereqs.install_prereqs')
+@consume_args
+def run_devstack(args):
     """
     Start the devstack lms or studio server
     """
-    devstack_install(options)
-    devstack_assets(options)
-    devstack_start(options)
+    parser = argparse.ArgumentParser(prog='paver run_devstack')
+    parser.add_argument('system', type=str, nargs=1, help="lms or studio")
+    parser.add_argument('--fast', action='store_true', default=False, help="Skip updating assets")
+    args = parser.parse_args(args)
+    system = args.system[0]
+
+    if system not in ['lms', 'studio']:
+        print_red("System must be either lms or studio")
+        exit(1)
+
+    if not args.fast:
+        call_task('pavelib.assets.update_assets', args=[system, "--settings=devstack"])
+
+    run_process(django_cmd(
+        system, 'devstack', 'runserver',
+        "0.0.0.0:{}".format(DEFAULT_PORT[system])
+    ))

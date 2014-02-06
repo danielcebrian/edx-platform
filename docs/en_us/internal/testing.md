@@ -88,7 +88,7 @@ because the `capa` package handles problem XML.
 
 You can run all of the unit-level tests using the command
 
-    paver test
+    rake test
 
 This includes python, javascript, and documentation tests. It does not, however,
 run any acceptance tests.
@@ -99,44 +99,44 @@ We use [nose](https://nose.readthedocs.org/en/latest/) through
 the [django-nose plugin](https://pypi.python.org/pypi/django-nose)
 to run the test suite.
 
-You can run all the python tests using `paver` commands.  For example,
+You can run all the python tests using `rake` commands.  For example,
 
-    paver test_python
+    rake test:python
 
 runs all the tests.  It also runs `collectstatic`, which prepares the static files used by the site (for example, compiling Coffeescript to Javascript).
 
 You can re-run all failed python tests by running
 
-    paver test_python --failed
+    rake test:python[--failed]
 
 You can also run the tests without `collectstatic`, which tends to be faster:
 
-    paver fasttest --system=lms
+    rake fasttest_lms
 
 or
 
-    paver fasttest --system=cms
+    rake fasttest_cms
 
 xmodule can be tested independently, with this:
 
-    paver test_lib --lib=common/lib/xmodule
+    rake test_common/lib/xmodule
 
 other module level tests include
 
-* `paver test_lib --lib=common/lib/capa`
-* `paver test_lib --lib=common/lib/calc`
+* `rake test_common/lib/capa`
+* `rake test_common/lib/calc`
 
 To run a single django test class:
 
-    paver test_system --system=lms --test_id=lms/djangoapps/courseware/tests/tests.py:ActivateLoginTest
+    rake test_lms[lms/djangoapps/courseware/tests/tests.py:ActivateLoginTest]
 
 To run a single django test:
 
-    paver test_system --system=lms --test_id=lms/djangoapps/courseware/tests/tests.py:ActivateLoginTest.test_activate_login
+    rake test_lms[lms/djangoapps/courseware/tests/tests.py:ActivateLoginTest.test_activate_login]
 
 To re-run all failing django tests from lms or cms:
 
-    paver test_system --system=lms --test_id=--failed
+    rake test_lms[--failed]
 
 To run a single nose test file:
 
@@ -173,23 +173,23 @@ Very handy: if you uncomment the `pdb=1` line in `setup.cfg`, it will drop you i
 
 We use Jasmine to run JavaScript unit tests.  To run all the JavaScript tests:
 
-    paver test:js
+    rake test:js
 
 To run a specific set of JavaScript tests and print the results to the console:
 
-    paver test_js_run --suite=lms
-    paver test_js_run --suite=cms
-    paver test_js_run --suite=xmodule
-    paver test_js_run --suite=common
+    rake test:js:run[lms]
+    rake test:js:run[cms]
+    rake test:js:run[xmodule]
+    rake test:js:run[common]
 
 To run JavaScript tests in your default browser:
 
-    paver test_js_dev --suite=lms
-    paver test_js_dev --suite=cms
-    paver test_js_dev --suite=xmodule
-    paver test_js_dev --suite=common
+    rake test:js:dev[lms]
+    rake test:js:dev[cms]
+    rake test:js:dev[xmodule]
+    rake test:js:dev[common]
 
-These paver commands call through to a custom test runner.  For more info, see [js-test-tool](https://github.com/edx/js-test-tool).
+These rake commands call through to a custom test runner.  For more info, see [js-test-tool](https://github.com/edx/js-test-tool).
 
 
 ### Running Acceptance Tests
@@ -205,29 +205,29 @@ with Chrome (not Chromium) version 28.0.1500.71 with ChromeDriver
 version 2.1.210398.
 
 To run all the acceptance tests:
-    paver test_acceptance_all
+    rake test:acceptance
 
 To run only for lms or cms:
 
-    paver test_acceptance --system=lms
-    paver test_acceptance --system=cms
+    rake test:acceptance:lms
+    rake test:acceptance:cms
 
 To test only a specific feature:
 
-    paver test_acceptance --system=lms --harvest_args="lms/djangoapps/courseware/features/problems.feature"
+    rake test:acceptance:lms["lms/djangoapps/courseware/features/problems.feature"]
 
 To test only a specific scenario
 
-    paver test_acceptance --system=lms --harvest_args="lms/djangoapps/courseware/features/problems.feature -s 3"
+    rake test:acceptance:lms["lms/djangoapps/courseware/features/problems.feature -s 3"]
 
 To start the debugger on failure, add the `--pdb` option:
 
-    paver test_acceptance --system=lms --harvest_args="lms/djangoapps/courseware/features/problems.feature --pdb"
+    rake test:acceptance:lms["lms/djangoapps/courseware/features/problems.feature --pdb"]
 
 To run tests faster by not collecting static files, you can use
-`paver test_acceptance_fast --system=lms` and `paver test_acceptance_fast --system=cms`.
+`rake test:acceptance:lms:fast` and `rake test:acceptance:cms:fast`.
 
-Acceptance tests will run on a randomized port and can be run in the background of paver cms and lms or unit tests.
+Acceptance tests will run on a randomized port and can be run in the background of rake cms and lms or unit tests.
 To specify the port, change the LETTUCE_SERVER_PORT constant in cms/envs/acceptance.py and lms/envs/acceptance.py
 as well as the port listed in cms/djangoapps/contentstore/feature/upload.py
 
@@ -243,11 +243,11 @@ To view test coverage:
 
 1. Run the test suite:
 
-        paver test
+        rake test
 
 2. Generate reports:
 
-        paver coverage
+        rake coverage
 
 3. Reports are located in the `reports` folder.  The command
 generates HTML and XML (Cobertura format) reports.

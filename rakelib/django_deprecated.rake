@@ -65,7 +65,7 @@ deprecated("resetdb", "paver resetdb")
     deprecated("#{system}_worker", "paver run_celery --system=#{system}")
 
     environments(system).each do |env|
-      deprecated("#{system}:resetdb:#{env}", "paver resetdb --system=#{system} --env=#{env}")
+      deprecated("#{system}:resetdb:#{env}", "paver resetdb --env=#{env}")
       deprecated("#{system}:${env}", "paver #{system} --env=#{env}")
       deprecated("#{system}:check_settings:#{env}", "paver check_settings --system=#{system} --env=#{env}")
     end
