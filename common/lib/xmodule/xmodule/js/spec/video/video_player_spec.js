@@ -445,13 +445,13 @@
                 });
 
                 it('video has a correct speed', function () {
-                    spyOn(state.videoPlayer, 'onSpeedChange');
+                    spyOn(state.videoPlayer, 'setPlaybackRate');
                     state.speed = '2.0';
                     state.videoPlayer.onPlay();
-                    expect(state.videoPlayer.onSpeedChange)
+                    expect(state.videoPlayer.setPlaybackRate)
                         .toHaveBeenCalledWith('2.0');
                     state.videoPlayer.onPlay();
-                    expect(state.videoPlayer.onSpeedChange.calls.length).toEqual(1);
+                    expect(state.videoPlayer.setPlaybackRate.calls.length).toEqual(1);
                 });
 
                 it('video has a correct volume', function () {
