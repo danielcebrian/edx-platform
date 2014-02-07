@@ -752,7 +752,7 @@ main_vendor_js = [
     'js/vendor/ova/jquery-Watch.js',
     'js/vendor/ova/ova.js',
     'js/vendor/ova/catch/js/catch.js',
-    'js/vendor/ova/catch/js/handlebars-1.1.2.js'
+    'js/vendor/ova/catch/js/handlebars-1.1.2.js',
     'js/vendor/URI.min.js'
 ]
 
