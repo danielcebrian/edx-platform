@@ -247,11 +247,8 @@
             "share-annotator": {
                 deps: ["annotator"]
             },
-            "tinymce-annotator": {
-                exports: "tinymce"
-            },
             "richText-annotator": {
-                deps: ["annotator", "tinymce-annotator"]
+                deps: ["annotator", "tinymce"]
             },
             "reply-annotator": {
                 deps: ["annotator"]
@@ -264,7 +261,7 @@
             },
             "ova":{
                 exports: "ova",
-                deps: ["annotator", "video.dev", "vjs.youtube", "rangeslider", "share-annotator", "tinymce-annotator", "richText-annotator", "reply-annotator", "tags-annotator", "flagging-annotator", "jquery-Watch", "catch", "handlebars", "URI"]
+                deps: ["annotator", "video.dev", "vjs.youtube", "rangeslider", "share-annotator", "tinymce", "richText-annotator", "reply-annotator", "tags-annotator", "flagging-annotator", "jquery-Watch", "catch", "handlebars", "URI"]
             }
         },
         // load jquery and gettext automatically

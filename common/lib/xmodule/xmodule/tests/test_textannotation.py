@@ -52,10 +52,19 @@ class TextAnnotationModuleTestCase(unittest.TestCase):
         actual = self.mod._extract_instructions(xmltree)  # pylint: disable=W0212
         self.assertIsNone(actual)
 
+    def test_token(self):
+        """
+        Test for the token generator. This creates a random course and passes it through the token file which generates the
+        token that will be passed in to the annotation_storage_url.
+        """
+        expected = "eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJpc3N1ZWRBdCI6ICIyMDE0LTAxLTIzVDE5OjM1OjE3LjUyMjEwNC01OjAwIiwgImNvbnN1bWVyS2V5IjogInh4eHh4eHh4LXh4eHgteHh4eC14eHh4LXh4eHh4eHh4eHh4eCIsICJ1c2VySWQiOiAidXNlcm5hbWUiLCAidHRsIjogODY0MDB9.OjWz9mzqJnYuzX-f3uCBllqJUa8PVWJjcDy_McfxLvc"
+        response = self.mod.token("username")
+        self.assertEqual(expected.split('.')[0], response.split('.')[0])
+
     def test_get_html(self):
         """
         Tests the function that passes in all the information in the context that will be used in templates/textannotation.html
         """
         context = self.mod.get_html()
-        for key in ['display_name', 'tag', 'source', 'instructions_html', 'content_html', 'annotation_storage']:
+        for key in ['display_name', 'tag', 'source', 'instructions_html', 'content_html', 'annotation_storage', 'token']:
             self.assertIn(key, context)

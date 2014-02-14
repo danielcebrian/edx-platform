@@ -62,6 +62,15 @@ class VideoAnnotationModuleTestCase(unittest.TestCase):
         self.assertEqual(expectedyoutube, result2)
         self.assertEqual(expectednotyoutube, result1)
 
+    def test_token(self):
+        """
+        Test for the token generator. This creates a random course and passes it through the token file which generates the
+        token that will be passed in to the annotation_storage_url.
+        """
+        expected = "eyJhbGciOiAiSFMyNTYiLCAidHlwIjogIkpXVCJ9.eyJpc3N1ZWRBdCI6ICIyMDE0LTAxLTIzVDE5OjM1OjE3LjUyMjEwNC01OjAwIiwgImNvbnN1bWVyS2V5IjogInh4eHh4eHh4LXh4eHgteHh4eC14eHh4LXh4eHh4eHh4eHh4eCIsICJ1c2VySWQiOiAidXNlcm5hbWUiLCAidHRsIjogODY0MDB9.OjWz9mzqJnYuzX-f3uCBllqJUa8PVWJjcDy_McfxLvc"
+        response = self.mod.token("username")
+        self.assertEqual(expected.split('.')[0], response.split('.')[0])
+
     def test_get_html(self):
         """
         Tests to make sure variables passed in truly exist within the html once it is all rendered.

@@ -43,7 +43,6 @@
 		$(this).parents('.annotatable-section:first').find('.annotatable-instructions')[slideMethod]();
 	}
 	$('.annotatable-toggle-instructions').on('click', onClickHideInstructions);
-	
 	//Grab uri of the course
 	var parts = window.location.href.split("/"), 
 		uri = '',
@@ -57,8 +56,6 @@
 		uri = window.location.protocol;
 		for (var index = 0; index <= 9; index += 1) uri += lms_location.split("/")[index]+"/"; //Get the unit url
 	}
-        var unit_id = $('#sequence-list').find('.active').attr("data-element");
-        uri += unit_id;
 	var pagination = 100,
 		is_staff = !('${user.is_staff}'=='False'),
         options = {
@@ -117,7 +114,7 @@
                   },
             },
             auth: {
-                tokenUrl: location.protocol+'//'+location.host+"/token?course_id="+courseid
+                token: "${token}"
             },
             store: {
                 // The endpoint of the store on your server.
